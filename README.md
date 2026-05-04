@@ -42,7 +42,7 @@ python generate_dataset.py --n-patients 5000 --seed 99 --output my_data.csv --re
 
 ## Dataset Overview
 
-Each patient gets 1–4 visits (70% single-visit, 18% two visits, etc.) spanning 2019–2024. The dataset includes:
+Each patient gets 1–4 visits (70% single-visit, 18% two visits, etc.) spanning 2019–2024, yielding roughly **~500,000 rows** at the default 340,000-patient scale (expected avg 1.46 visits/patient + ~0.9% duplicate injection). The dataset includes:
 
 - **Demographics**: patient ID, name, DOB, age, gender, race/ethnicity, state, ZIP, insurance
 - **Encounter**: admit/discharge dates, department, admit type, length of stay

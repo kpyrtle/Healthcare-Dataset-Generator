@@ -74,7 +74,7 @@ Vitals and labs are correlated to diagnosis, age, and department — e.g., BP el
 ## Key Design Decisions
 
 - **Reproducibility**: Controlled by `CONFIG["seed"]` (default 42). Change to get different data.
-- **Volume**: `CONFIG["n_patients"]` (default 5000); patients get 1–4 visits each.
+- **Volume**: `CONFIG["n_patients"]` (default 340,000); patients get 1–4 visits each, yielding ~500,000 rows.
 - **Date range**: 2019-01-01 to 2024-12-31.
-- **Output**: Single denormalized CSV (~60+ columns); no relational tables.
+- **Output**: Single denormalized CSV (46 columns); no relational tables.
 - **No external data sources**: All reference data is hardcoded in the script.
