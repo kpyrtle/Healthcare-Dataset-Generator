@@ -167,7 +167,9 @@ def generate_visit(
     if start_date >= end_date:
         return None
 
-    admit_date = start_date + timedelta(days=random.randint(0, (end_date - start_date).days))
+    admit_date = start_date + timedelta(
+        days=random.randint(0, (end_date - start_date).days)
+    )
     admit_type = np.random.choice(ADMIT_TYPES, p=ADMIT_TYPE_WEIGHTS)
 
     if admit_type == "Elective" and admit_date.weekday() >= 5:

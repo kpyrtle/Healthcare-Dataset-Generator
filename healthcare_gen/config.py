@@ -34,12 +34,24 @@ def build_arg_parser():
     p.add_argument("--seed", type=int, default=CONFIG["seed"])
     p.add_argument("--output", default=CONFIG["output_path"])
     p.add_argument("--report", default=CONFIG["report_path"])
-    p.add_argument("--cores", type=int, default=CONFIG["n_cores"],
-                   help="Worker processes (1 = serial, >1 = parallel)")
-    p.add_argument("--format", choices=["csv", "parquet"], default=CONFIG["output_format"],
-                   help="Output format (parquet is faster and smaller)")
-    p.add_argument("--no-verbose", dest="verbose", action="store_false",
-                   help="Skip dataset summary and schema validation after generation")
+    p.add_argument(
+        "--cores",
+        type=int,
+        default=CONFIG["n_cores"],
+        help="Worker processes (1 = serial, >1 = parallel)",
+    )
+    p.add_argument(
+        "--format",
+        choices=["csv", "parquet"],
+        default=CONFIG["output_format"],
+        help="Output format (parquet is faster and smaller)",
+    )
+    p.add_argument(
+        "--no-verbose",
+        dest="verbose",
+        action="store_false",
+        help="Skip dataset summary and schema validation after generation",
+    )
     p.set_defaults(verbose=CONFIG["verbose"])
     return p
 

@@ -14,19 +14,52 @@ from .demographics import generate_patient_demographics
 from .visits import generate_visit
 
 EXPECTED_COLUMNS = {
-    "patient_id", "first_name", "last_name", "date_of_birth", "age",
-    "gender", "race_ethnicity", "state", "zip_code", "insurance_type",
-    "visit_number", "admit_date", "admit_time", "discharge_date",
-    "length_of_stay_days", "department", "admit_type",
-    "primary_dx_code", "primary_dx_description", "secondary_dx_codes",
-    "procedure_codes", "procedure_descriptions", "medications",
-    "attending_provider_id", "bp_systolic", "bp_diastolic",
-    "heart_rate_bpm", "o2_saturation_pct", "temperature_f", "bmi",
-    "total_charges_usd", "readmitted_30day", "days_to_readmission",
-    "discharge_disposition", "patient_satisfaction_score",
-    "inpatient_mortality", "has_pcp", "lives_alone", "has_transportation",
-    "ed_visits_past_6mo", "glucose_mg_dl", "creatinine_mg_dl",
-    "potassium_meq_l", "sodium_meq_l", "wbc_k_ul", "hemoglobin_g_dl",
+    "patient_id",
+    "first_name",
+    "last_name",
+    "date_of_birth",
+    "age",
+    "gender",
+    "race_ethnicity",
+    "state",
+    "zip_code",
+    "insurance_type",
+    "visit_number",
+    "admit_date",
+    "admit_time",
+    "discharge_date",
+    "length_of_stay_days",
+    "department",
+    "admit_type",
+    "primary_dx_code",
+    "primary_dx_description",
+    "secondary_dx_codes",
+    "procedure_codes",
+    "procedure_descriptions",
+    "medications",
+    "attending_provider_id",
+    "bp_systolic",
+    "bp_diastolic",
+    "heart_rate_bpm",
+    "o2_saturation_pct",
+    "temperature_f",
+    "bmi",
+    "total_charges_usd",
+    "readmitted_30day",
+    "days_to_readmission",
+    "discharge_disposition",
+    "patient_satisfaction_score",
+    "inpatient_mortality",
+    "has_pcp",
+    "lives_alone",
+    "has_transportation",
+    "ed_visits_past_6mo",
+    "glucose_mg_dl",
+    "creatinine_mg_dl",
+    "potassium_meq_l",
+    "sodium_meq_l",
+    "wbc_k_ul",
+    "hemoglobin_g_dl",
 }
 
 
@@ -97,7 +130,12 @@ def generate_dataset() -> Tuple[pd.DataFrame, DataQualityTracker]:
             prev_discharge = None
             for visit_num in range(1, n_visits + 1):
                 result = generate_visit(
-                    patient_id, demographics, visit_num, prev_discharge, tracker, row_idx
+                    patient_id,
+                    demographics,
+                    visit_num,
+                    prev_discharge,
+                    tracker,
+                    row_idx,
                 )
 
                 if result is None:
@@ -212,4 +250,6 @@ def validate_schema(df: pd.DataFrame):
         s = df[col].dropna()
         bad = ((s < lo) | (s > hi)).sum()
         if bad > 0:
-            print(f"  note: {col} has {bad} out-of-range values (expected: corruption layer)")
+            print(
+                f"  note: {col} has {bad} out-of-range values (expected: corruption layer)"
+            )

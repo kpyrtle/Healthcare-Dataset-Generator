@@ -96,8 +96,8 @@ def generate_vitals(age: int, dx_code: str, dept: str) -> Dict[str, Optional[flo
     if bp_dia >= bp_sys:
         bp_dia = bp_sys - random.randint(20, 40)
 
-    hr   = int(max(30, min(180, raw[2])))
-    o2   = round(float(max(70.0, min(100.0, raw[3]))), 1)
+    hr = int(max(30, min(180, raw[2])))
+    o2 = round(float(max(70.0, min(100.0, raw[3]))), 1)
     temp = round(float(max(94.0, min(106.0, raw[4]))), 1)
 
     return {
@@ -120,14 +120,14 @@ def generate_lab_results(dx_code: str, age: int) -> Dict[str, Optional[float]]:
 
     raw = np.random.normal(
         [100, 1.0, 4.0, 140, 7.5, 13.5],
-        [25,  0.3, 0.4,   3, 2.5,  1.8],
+        [25, 0.3, 0.4, 3, 2.5, 1.8],
     )
-    labs["glucose_mg_dl"]    = int(raw[0])
+    labs["glucose_mg_dl"] = int(raw[0])
     labs["creatinine_mg_dl"] = round(float(raw[1]), 2)
-    labs["potassium_meq_l"]  = round(float(raw[2]), 1)
-    labs["sodium_meq_l"]     = int(raw[3])
-    labs["wbc_k_ul"]         = round(float(raw[4]), 1)
-    labs["hemoglobin_g_dl"]  = round(float(raw[5]), 1)
+    labs["potassium_meq_l"] = round(float(raw[2]), 1)
+    labs["sodium_meq_l"] = int(raw[3])
+    labs["wbc_k_ul"] = round(float(raw[4]), 1)
+    labs["hemoglobin_g_dl"] = round(float(raw[5]), 1)
 
     if dx_code == "E11.9":
         labs["glucose_mg_dl"] = int(np.random.normal(180, 60))
@@ -135,11 +135,11 @@ def generate_lab_results(dx_code: str, age: int) -> Dict[str, Optional[float]]:
 
     if dx_code == "N18.6":
         labs["creatinine_mg_dl"] = round(np.random.normal(6.0, 2.0), 2)
-        labs["potassium_meq_l"]  = round(np.random.normal(5.2, 0.6), 1)
-        labs["hemoglobin_g_dl"]  = round(np.random.normal(10.0, 1.5), 1)
+        labs["potassium_meq_l"] = round(np.random.normal(5.2, 0.6), 1)
+        labs["hemoglobin_g_dl"] = round(np.random.normal(10.0, 1.5), 1)
 
     if dx_code == "A41.9":
-        labs["wbc_k_ul"]       = round(np.random.lognormal(2.5, 0.5), 1)
+        labs["wbc_k_ul"] = round(np.random.lognormal(2.5, 0.5), 1)
         labs["lactate_mmol_l"] = round(np.random.normal(4.0, 2.0), 1)
 
     if dx_code in ["K92.1"]:
@@ -151,11 +151,11 @@ def generate_lab_results(dx_code: str, age: int) -> Dict[str, Optional[float]]:
     if dx_code == "E87.6":
         labs["potassium_meq_l"] = round(np.random.normal(2.8, 0.4), 1)
 
-    labs["glucose_mg_dl"]    = max(40,  min(600,  labs["glucose_mg_dl"]))
+    labs["glucose_mg_dl"] = max(40, min(600, labs["glucose_mg_dl"]))
     labs["creatinine_mg_dl"] = max(0.3, min(15.0, labs["creatinine_mg_dl"]))
-    labs["potassium_meq_l"]  = max(2.0, min(7.0,  labs["potassium_meq_l"]))
-    labs["sodium_meq_l"]     = max(120, min(160,  labs["sodium_meq_l"]))
-    labs["wbc_k_ul"]         = max(0.5, min(50.0, labs["wbc_k_ul"]))
-    labs["hemoglobin_g_dl"]  = max(4.0, min(20.0, labs["hemoglobin_g_dl"]))
+    labs["potassium_meq_l"] = max(2.0, min(7.0, labs["potassium_meq_l"]))
+    labs["sodium_meq_l"] = max(120, min(160, labs["sodium_meq_l"]))
+    labs["wbc_k_ul"] = max(0.5, min(50.0, labs["wbc_k_ul"]))
+    labs["hemoglobin_g_dl"] = max(4.0, min(20.0, labs["hemoglobin_g_dl"]))
 
     return labs
