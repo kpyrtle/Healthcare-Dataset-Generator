@@ -4,6 +4,7 @@
 data_quality_*
 /.claude
 *.csv
+*.xlsx
 *.parquet
 profile_output*.txt
 .DS_store
