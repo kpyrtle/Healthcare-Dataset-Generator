@@ -4,20 +4,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a **synthetic healthcare dataset generator** — a single Python script (`generate_dataset.py`) that produces realistic, intentionally flawed clinical data for testing data validation and cleaning pipelines.
+This project has two main scripts:
+- **`generate_dataset.py`** — produces a large synthetic clinical dataset with realistic, intentionally flawed data
+- **`clean_healthcare_data.py`** — cleans the raw output and writes a cleaned CSV (or loads to SQL Server)
 
-## Running the Generator
+## Running the Scripts
 
 ```bash
-# Generate the dataset
-python generate_dataset.py
+# Generate the raw dataset (outputs to outputs/)
+python generate_dataset.py --cores 8
 
-# Outputs:
-#   /mnt/user-data/outputs/healthcare_dataset_improved.csv
-#   /mnt/user-data/outputs/data_quality_report.txt
+# Clean the raw dataset -> outputs/healthcare_cleaned_full.csv
+python clean_healthcare_data.py
+
+# Quick 1,000-row sample for inspection
+python clean_healthcare_data.py --preview
 ```
 
-**Dependencies**: `pandas`, `numpy` (plus Python stdlib). No install step or build system.
+All outputs land in `outputs/`:
+- `healthcare_dataset_raw.csv` — raw generated data
+- `data_quality_report.txt` — injected issue summary
+- `healthcare_cleaned_full.csv` — full cleaned dataset
+- `healthcare_cleaned_preview.csv` — 1,000-row sample (--preview only)
+
+**Dependencies**: `pandas`, `numpy`, `sqlalchemy` (plus Python stdlib). No install step or build system.
 
 ## Architecture
 
@@ -70,6 +80,26 @@ All injected issues are tracked by `DataQualityTracker` and written to the quali
 ### Clinical Correlations
 
 Vitals and labs are correlated to diagnosis, age, and department — e.g., BP elevated for hypertension patients, glucose elevated for diabetes, troponin elevated for MI. ICU encounters have higher variance. Seasonal diagnosis weighting affects flu/RSV (winter), asthma (spring/fall), etc.
+
+## Cleaning Pipeline (`clean_healthcare_data.py`)
+
+A standalone script — no package structure. Connection constants (`SERVER`, `DATABASE`) are at the top of the file. The SQL Server load (`load_to_sql_server`) is currently commented out in `main()`; default output is `outputs/healthcare_cleaned_full.csv`.
+
+Cleaning steps in order:
+1. Empty strings → `NaN`
+2. Exact duplicates and duplicate patient/admit-date pairs removed
+3. Categorical typos standardized (department, gender, insurance)
+4. Dates parsed; length of stay recomputed; age derived from DOB
+5. Vitals and labs clamped to physiologically plausible ranges
+6. Negative charges corrected via `abs()` + `charge_sign_corrected` flag; extreme charges (> $10M) nulled
+7. Invalid satisfaction scores (outside 1–10) nulled
+8. Malformed zip codes nulled
+9. Logical flag consistency: `readmitted=1` with no `days_to_readmission` flagged
+10. Invalid discharge disposition values nulled
+11. Mortality/readmission contradictions corrected
+12. `days_to_readmission` clamped to 1–30 day window; `readmission_days_missing` flag recomputed
+13. `ed_visits_past_6mo` validated as non-negative integer
+14. PII columns (`first_name`, `last_name`) dropped
 
 ## Key Design Decisions
 
