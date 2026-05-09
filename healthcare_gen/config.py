@@ -1,6 +1,9 @@
 import argparse
 import os
 
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_OUTPUTS = os.path.join(_PROJECT_ROOT, "outputs")
+
 CONFIG = {
     "n_patients": 340000,
     "seed": 42,
@@ -20,9 +23,9 @@ CONFIG = {
     "include_medications": True,
     "include_social_determinants": True,
     "include_procedures": True,
-    "output_path": r"C:\Users\kpyrt\Desktop\Healthcare\healthcare_dataset_improved.csv",
-    "report_path": r"C:\Users\kpyrt\Desktop\Healthcare\data_quality_report.txt",
-    "n_cores": 1,
+    "output_path": os.path.join(_OUTPUTS, "healthcare_dataset_raw.csv"),
+    "report_path": os.path.join(_OUTPUTS, "data_quality_report.txt"),
+    "n_cores": 8,
     "output_format": "csv",
     "verbose": True,
 }
