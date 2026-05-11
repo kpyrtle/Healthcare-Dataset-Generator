@@ -148,6 +148,19 @@ def calculate_mortality_risk(age: int, dx_code: str, dept: str) -> float:
     return min(risk, 0.25)
 
 
+def _pick_readmission_dx(primary_dx: str, secondary_dx_str: str) -> str:
+    r = random.random()
+    if r < 0.60:
+        return primary_dx
+    elif r < 0.90:
+        secondary = [c for c in secondary_dx_str.split("|") if c and c in DIAGNOSES]
+        if secondary:
+            return random.choice(secondary)
+        return primary_dx
+    else:
+        return random.choice(list(DIAGNOSES.keys()))
+
+
 def generate_visit(
     patient_id: str,
     demographics: Dict,
@@ -155,21 +168,30 @@ def generate_visit(
     prev_discharge: Optional[datetime],
     tracker: DataQualityTracker,
     row_idx: int,
+    force_no_readmit: bool = False,
+    admit_date_override: Optional[datetime] = None,
+    override_dx: Optional[str] = None,
 ) -> Optional[Tuple[Dict[str, Any], datetime]]:
     start_date = _START_DATE
     end_date = _END_DATE
 
-    if prev_discharge:
-        start_date = max(
-            start_date, prev_discharge + timedelta(days=random.randint(30, 365))
+    if admit_date_override is not None:
+        if admit_date_override >= end_date:
+            return None
+        admit_date = admit_date_override
+    else:
+        if prev_discharge:
+            start_date = max(
+                start_date, prev_discharge + timedelta(days=random.randint(30, 365))
+            )
+
+        if start_date >= end_date:
+            return None
+
+        admit_date = start_date + timedelta(
+            days=random.randint(0, (end_date - start_date).days)
         )
 
-    if start_date >= end_date:
-        return None
-
-    admit_date = start_date + timedelta(
-        days=random.randint(0, (end_date - start_date).days)
-    )
     admit_type = np.random.choice(ADMIT_TYPES, p=ADMIT_TYPE_WEIGHTS)
 
     if admit_type == "Elective" and admit_date.weekday() >= 5:
@@ -184,7 +206,7 @@ def generate_visit(
     else:
         admit_hour = random.choice(range(6, 16))
 
-    primary_dx = select_diagnosis_for_date(admit_date)
+    primary_dx = override_dx if override_dx is not None else select_diagnosis_for_date(admit_date)
     secondary_dx = generate_secondary_diagnoses(primary_dx)
 
     dept = get_department_for_diagnosis(primary_dx)
@@ -244,19 +266,23 @@ def generate_visit(
     )
 
     has_pcp = social.get("has_pcp", True)
-    readmit_risk = calculate_readmit_risk(age, primary_dx, insurance, los, has_pcp)
-    readmitted = int(random.random() < readmit_risk)
 
-    days_to_readmit = np.nan
-    if readmitted:
-        days_to_readmit = round(np.random.exponential(12))
-        days_to_readmit = corrupt(
-            days_to_readmit,
-            0.08,
-            tracker=tracker,
-            issue_type="missing_readmit_days",
-            row_idx=row_idx,
-        )
+    if force_no_readmit:
+        readmitted = 0
+        days_to_readmit = np.nan
+    else:
+        readmit_risk = calculate_readmit_risk(age, primary_dx, insurance, los, has_pcp)
+        readmitted = int(random.random() < readmit_risk)
+        days_to_readmit = np.nan
+        if readmitted:
+            days_to_readmit = max(1, round(np.random.exponential(12)))
+            days_to_readmit = corrupt(
+                days_to_readmit,
+                0.08,
+                tracker=tracker,
+                issue_type="missing_readmit_days",
+                row_idx=row_idx,
+            )
 
     mortality_risk = calculate_mortality_risk(age, primary_dx, dept)
     mortality = int(random.random() < mortality_risk)

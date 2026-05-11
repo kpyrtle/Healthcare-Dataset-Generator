@@ -11,7 +11,7 @@ from tqdm import tqdm
 from .config import CONFIG
 from .corruption import DataQualityTracker
 from .demographics import generate_patient_demographics
-from .visits import generate_visit
+from .visits import _END_DATE, _pick_readmission_dx, generate_visit
 
 EXPECTED_COLUMNS = {
     "patient_id",
@@ -72,6 +72,55 @@ def rand_date(start: datetime, end: datetime) -> datetime:
     return start + timedelta(days=random.randint(0, (end - start).days))
 
 
+def _maybe_inject_readmission(
+    visit_row: dict,
+    next_visit_num: int,
+    demographics: dict,
+    tracker: DataQualityTracker,
+    row_idx: int,
+) -> Tuple[list, int, datetime | None]:
+    """Return (extra_rows, updated_visit_num, updated_prev_discharge).
+
+    If the visit is an index with a valid days_to_readmission, generate one
+    readmission row (no chains, no explicit marker). Otherwise return empty.
+    """
+    if visit_row.get("readmitted_30day") != 1:
+        return [], next_visit_num, None
+
+    days_raw = visit_row.get("days_to_readmission")
+    if pd.isna(days_raw):
+        return [], next_visit_num, None
+
+    discharge = datetime.strptime(visit_row["discharge_date"], "%Y-%m-%d")
+    readmit_admit = discharge + timedelta(days=int(days_raw))
+
+    if readmit_admit >= _END_DATE:
+        return [], next_visit_num, None
+
+    readmit_dx = _pick_readmission_dx(
+        visit_row["primary_dx_code"],
+        visit_row.get("secondary_dx_codes", ""),
+    )
+
+    result = generate_visit(
+        visit_row["patient_id"],
+        demographics,
+        next_visit_num,
+        None,
+        tracker,
+        row_idx,
+        force_no_readmit=True,
+        admit_date_override=readmit_admit,
+        override_dx=readmit_dx,
+    )
+
+    if result is None:
+        return [], next_visit_num, None
+
+    readmit_row, readmit_discharge = result
+    return [readmit_row], next_visit_num + 1, readmit_discharge
+
+
 def _generate_chunk(
     start_idx: int, end_idx: int, seed_offset: int
 ) -> Tuple[list, DataQualityTracker]:
@@ -91,7 +140,9 @@ def _generate_chunk(
             n_visits = 1
 
         prev_discharge = None
-        for visit_num in range(1, n_visits + 1):
+        visit_num = 0
+        for _ in range(n_visits):
+            visit_num += 1
             result = generate_visit(
                 patient_id, demographics, visit_num, prev_discharge, tracker, i
             )
@@ -99,6 +150,13 @@ def _generate_chunk(
                 break
             visit_row, prev_discharge = result
             rows.append(visit_row)
+
+            extra_rows, visit_num, readmit_discharge = _maybe_inject_readmission(
+                visit_row, visit_num + 1, demographics, tracker, i
+            )
+            rows.extend(extra_rows)
+            if readmit_discharge is not None:
+                prev_discharge = readmit_discharge
 
     return rows, tracker
 
@@ -128,7 +186,9 @@ def generate_dataset() -> Tuple[pd.DataFrame, DataQualityTracker]:
                 n_visits = 1
 
             prev_discharge = None
-            for visit_num in range(1, n_visits + 1):
+            visit_num = 0
+            for _ in range(n_visits):
+                visit_num += 1
                 result = generate_visit(
                     patient_id,
                     demographics,
@@ -144,6 +204,15 @@ def generate_dataset() -> Tuple[pd.DataFrame, DataQualityTracker]:
                 visit_row, prev_discharge = result
                 rows.append(visit_row)
                 row_idx += 1
+
+                extra_rows, visit_num, readmit_discharge = _maybe_inject_readmission(
+                    visit_row, visit_num + 1, demographics, tracker, row_idx
+                )
+                for extra_row in extra_rows:
+                    rows.append(extra_row)
+                    row_idx += 1
+                if readmit_discharge is not None:
+                    prev_discharge = readmit_discharge
 
     else:
         chunk_size = n_patients // n_cores
