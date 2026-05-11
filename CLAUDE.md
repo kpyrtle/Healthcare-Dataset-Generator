@@ -93,13 +93,13 @@ Cleaning steps in order:
 5. Vitals and labs clamped to physiologically plausible ranges
 6. Negative charges corrected via `abs()` + `charge_sign_corrected` flag; extreme charges (> $10M) nulled
 7. Invalid satisfaction scores (outside 1–10) nulled
-8. Malformed zip codes nulled
+8. Malformed zip codes nulled; valid zips truncated to 3-digit prefix (HIPAA Safe Harbor)
 9. Logical flag consistency: `readmitted=1` with no `days_to_readmission` flagged
 10. Invalid discharge disposition values nulled
 11. Mortality/readmission contradictions corrected
 12. `days_to_readmission` clamped to 1–30 day window; `readmission_days_missing` flag recomputed
 13. `ed_visits_past_6mo` validated as non-negative integer
-14. PII columns (`first_name`, `last_name`) dropped
+14. Safe Harbor de-identification: `date_of_birth` → `birth_year` (year only); `patient_id` → `research_id` (SHA-256 12-char hex); `first_name`, `last_name` dropped
 
 ## Key Design Decisions
 
