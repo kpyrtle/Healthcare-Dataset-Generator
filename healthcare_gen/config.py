@@ -25,7 +25,7 @@ CONFIG = {
     "include_procedures": True,
     "output_path": os.path.join(_OUTPUTS, "healthcare_dataset_raw.csv"),
     "report_path": os.path.join(_OUTPUTS, "data_quality_report.txt"),
-    "n_cores": 8,
+    "n_cores": 1,
     "output_format": "csv",
     "verbose": True,
 }
@@ -40,8 +40,8 @@ def build_arg_parser():
     p.add_argument(
         "--cores",
         type=int,
-        default=CONFIG["n_cores"],
-        help="Worker processes (1 = serial, >1 = parallel)",
+        default=os.cpu_count() or 1,
+        help="Worker processes (1 = serial, >1 = parallel; default: auto-detected CPU count)",
     )
     p.add_argument(
         "--format",

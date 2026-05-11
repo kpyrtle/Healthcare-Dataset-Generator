@@ -12,7 +12,7 @@ This project has two main scripts:
 
 ```bash
 # Generate the raw dataset (outputs to outputs/)
-python generate_dataset.py --cores 8
+python generate_dataset.py
 
 # Clean the raw dataset -> outputs/healthcare_cleaned_full.csv
 python clean_healthcare_data.py
@@ -27,7 +27,7 @@ All outputs land in `outputs/`:
 - `healthcare_cleaned_full.csv` — full cleaned dataset
 - `healthcare_cleaned_preview.csv` — 1,000-row sample (--preview only)
 
-**Dependencies**: `pandas`, `numpy`, `sqlalchemy` (plus Python stdlib). No install step or build system.
+**Dependencies**: `pandas`, `numpy`, `sqlalchemy`, `tqdm`, `pyarrow` (plus Python stdlib). Install: `pip install -r requirements.txt`.
 
 ## Architecture
 

@@ -11,7 +11,7 @@ pip install -r requirements.txt
 ## Usage
 
 ```bash
-# Basic run (340,000 patients, serial, CSV output)
+# Basic run (340,000 patients, auto-detected cores, CSV output)
 python generate_dataset.py
 
 # Parallel run using 8 cores, Parquet output (faster write, smaller file)
@@ -36,7 +36,7 @@ python generate_dataset.py --n-patients 5000 --seed 99 --output my_data.csv --re
 | `--seed` | 42 | Random seed for reproducibility |
 | `--output` | `outputs/healthcare_dataset_raw.csv` | CSV output path |
 | `--report` | `outputs/data_quality_report.txt` | Quality report output path |
-| `--cores` | 1 | Worker processes (1 = serial/reproducible, >1 = parallel) |
+| `--cores` | `os.cpu_count()` | Worker processes (1 = serial/reproducible, >1 = parallel; auto-detects CPUs) |
 | `--format` | `csv` | Output format: `csv` or `parquet` (faster write, ~5–10x smaller) |
 | `--no-verbose` | — | Skip dataset summary and schema validation after generation |
 
@@ -111,6 +111,7 @@ The dataset is corrupted at configured rates to simulate real-world data problem
 | Impossible values (e.g. negative charges) | 1% |
 | Swapped fields (dates or names) | 0.5% |
 | Duplicate rows | 0.9% |
+| Charge inflation | 2% |
 
 All injected issues are catalogued in the quality report.
 
