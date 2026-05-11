@@ -165,8 +165,8 @@ DEPARTMENTS = [
     "Radiology",
 ]
 
-ADMIT_TYPES = ["Emergency", "Elective", "Urgent", "Newborn", "Trauma", "Transfer"]
-ADMIT_TYPE_WEIGHTS = [0.28, 0.30, 0.20, 0.05, 0.10, 0.07]
+ADMIT_TYPES = ["Emergency", "Elective", "Urgent", "Trauma", "Transfer"]
+ADMIT_TYPE_WEIGHTS = [0.28, 0.30, 0.25, 0.10, 0.07]
 
 DIAGNOSES = {
     "I21.9": {
