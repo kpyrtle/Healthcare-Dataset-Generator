@@ -25,6 +25,8 @@ Output: SQL Server table  dbo.healthcare_visits_clean
 """
 
 import argparse
+import hashlib
+import os
 import pandas as pd
 import numpy as np
 from sqlalchemy import create_engine
@@ -39,7 +41,7 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # CONFIG  –  update these before running
 # ---------------------------------------------------------------------------
-INPUT_FILE   = r"outputs\healthcare_dataset_raw.csv"
+INPUT_FILE   = os.path.join("outputs", "healthcare_dataset_raw.csv")
 SERVER       = "YOUR_SERVER_NAME"        # e.g. localhost\\SQLEXPRESS
 DATABASE     = "YOUR_DATABASE_NAME"
 TABLE_NAME   = "healthcare_visits_clean"
@@ -174,6 +176,11 @@ def clean_dates_and_age(df: pd.DataFrame) -> pd.DataFrame:
     log.info("Nulled %d implausible age values", implausible_age.sum())
     df.loc[implausible_age, "age"] = np.nan
 
+    # Safe Harbor: retain birth year only, drop full DOB
+    df["birth_year"] = df["date_of_birth"].dt.year
+    df = df.drop(columns=["date_of_birth"], errors="ignore")
+    log.info("Replaced date_of_birth with birth_year")
+
     return df
 
 
@@ -264,6 +271,8 @@ def clean_zipcodes(df: pd.DataFrame) -> pd.DataFrame:
     invalid_zip = ~df["zip_code"].str.match(r"^\d{5}$")
     log.info("Nulled %d invalid zip_code values", invalid_zip.sum())
     df.loc[invalid_zip, "zip_code"] = np.nan
+    # Safe Harbor: truncate to 3-digit prefix
+    df["zip_code"] = df["zip_code"].str[:3]
     return df
 
 
@@ -379,9 +388,16 @@ def clean_social_determinants(df: pd.DataFrame) -> pd.DataFrame:
 # 13. COLUMN ORDERING  &  FINAL TIDY-UP
 # ---------------------------------------------------------------------------
 def final_tidy(df: pd.DataFrame) -> pd.DataFrame:
-    pii_cols = ["first_name", "last_name"]
+    # Safe Harbor: replace patient_id with a non-reversible research ID
+    if "patient_id" in df.columns:
+        df["research_id"] = df["patient_id"].astype(str).apply(
+            lambda x: hashlib.sha256(x.encode()).hexdigest()[:12]
+        )
+        log.info("Replaced patient_id with hashed research_id")
+
+    pii_cols = ["first_name", "last_name", "patient_id"]
     df = df.drop(columns=pii_cols, errors="ignore")
-    log.info("Dropped PII columns: %s", pii_cols)
+    log.info("Dropped PII columns: %s", [c for c in pii_cols if c in df.columns or c == "patient_id"])
 
     # Reset index
     df = df.reset_index(drop=True)
@@ -445,11 +461,11 @@ def main():
     df = final_tidy(df)
 
     if args.preview:
-        preview_path = r"outputs\healthcare_cleaned_preview.csv"
+        preview_path = os.path.join("outputs", "healthcare_cleaned_preview.csv")
         df.head(1000).to_csv(preview_path, index=False)
         log.info("Saved 1,000-row preview to %s", preview_path)
     else:
-        full_path = r"outputs\healthcare_cleaned_full.csv"
+        full_path = os.path.join("outputs", "healthcare_cleaned_full.csv")
         df.to_csv(full_path, index=False)
         # load_to_sql_server(df)
 
