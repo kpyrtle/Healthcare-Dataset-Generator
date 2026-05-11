@@ -1,3 +1,5 @@
+import os
+
 from .config import apply_cli_overrides, build_arg_parser, CONFIG
 from .pipeline import generate_dataset, print_summary, validate_schema
 
@@ -6,6 +8,8 @@ def main():
     parser = build_arg_parser()
     args = parser.parse_args()
     apply_cli_overrides(args)
+
+    os.makedirs(os.path.dirname(CONFIG["output_path"]), exist_ok=True)
 
     df, tracker = generate_dataset()
 
