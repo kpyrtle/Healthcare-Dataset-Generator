@@ -127,6 +127,23 @@ See `CONTEXT.md` for definitions of all domain terms.
 | `lives_alone` | bool | Social determinant |
 | `has_transportation` | bool | Social determinant |
 | `ed_visits_past_6mo` | int | Prior ED utilization — a readmission risk factor |
+| `procedure_codes` | string | Pipe-separated ICD-10 procedure codes (e.g. `99213|71046`) |
+| `procedure_descriptions` | string | Pipe-separated descriptions matching `procedure_codes` order |
+| `medications` | string | Pipe-separated medication names |
+| `secondary_dx_codes` | string | Pipe-separated ICD-10 codes for comorbidities |
+
+### Querying pipe-separated columns in SQL Server
+
+These columns are stored as single strings. Use `STRING_SPLIT()` (SQL Server 2016+) to expand them into rows:
+
+```sql
+-- Example: find all patients who received a specific medication
+SELECT patient_id, value AS medication
+FROM healthcare_cleaned_full
+CROSS APPLY STRING_SPLIT(medications, '|')
+WHERE medications IS NOT NULL
+  AND value = 'Metformin';
+```
 
 ---
 
