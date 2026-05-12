@@ -11,14 +11,21 @@ This project has two main scripts:
 ## Running the Scripts
 
 ```bash
+# First-time setup
+pip install -r requirements.txt
+make env                                  # creates .env — fill in DB_SERVER and DB_DATABASE
+
 # Generate the raw dataset (outputs to outputs/)
-python generate_dataset.py
+python generate_dataset.py               # or: make generate
 
 # Clean the raw dataset -> outputs/healthcare_cleaned_full.csv
-python clean_healthcare_data.py
+python clean_healthcare_data.py          # or: make clean-data
 
 # Quick 1,000-row sample for inspection
-python clean_healthcare_data.py --preview
+python clean_healthcare_data.py --preview  # or: make preview
+
+# Clean + normalize + bulk-load into SQL Server
+python clean_healthcare_data.py --load-sql # or: make load-sql
 ```
 
 All outputs land in `outputs/`:
@@ -27,7 +34,7 @@ All outputs land in `outputs/`:
 - `healthcare_cleaned_full.csv` — full cleaned dataset
 - `healthcare_cleaned_preview.csv` — 1,000-row sample (--preview only)
 
-**Dependencies**: `pandas`, `numpy`, `sqlalchemy`, `tqdm`, `pyarrow` (plus Python stdlib). Install: `pip install -r requirements.txt`.
+**Dependencies**: `pandas`, `numpy`, `sqlalchemy`, `tqdm`, `pyarrow`, `python-dotenv` (plus Python stdlib). Install: `pip install -r requirements.txt`.
 
 ## Architecture
 
@@ -83,7 +90,7 @@ Vitals and labs are correlated to diagnosis, age, and department — e.g., BP el
 
 ## Cleaning Pipeline (`clean_healthcare_data.py`)
 
-A standalone script — no package structure. Connection constants (`SERVER`, `DATABASE`) are at the top of the file. The SQL Server load (`load_to_sql_server`) is currently commented out in `main()`; default output is `outputs/healthcare_cleaned_full.csv`.
+A standalone script — no package structure. SQL Server credentials are loaded from `.env` via `python-dotenv` (never hardcoded). Run `make env` to scaffold `.env` from `.env.example`. Default output is `outputs/healthcare_cleaned_full.csv`; pass `--load-sql` to also normalize and bulk-load into SQL Server.
 
 Cleaning steps in order:
 1. Empty strings → `NaN`
@@ -106,5 +113,6 @@ Cleaning steps in order:
 - **Reproducibility**: Controlled by `CONFIG["seed"]` (default 42). Change to get different data.
 - **Volume**: `CONFIG["n_patients"]` (default 340,000); patients get 1–4 visits each, yielding ~500,000 rows.
 - **Date range**: 2019-01-01 to 2024-12-31.
-- **Output**: Single denormalized CSV (46 columns); no relational tables.
+- **Output**: Denormalized CSV by default; `--load-sql` normalizes into `patients`, `encounters`, `vitals`, `lab_results`, `encounter_outcomes`, and `ed_utilization` tables in SQL Server.
+- **Credentials**: SQL Server connection values (`DB_SERVER`, `DB_DATABASE`, `DB_DRIVER`) are read from `.env` — see `.env.example` for the template.
 - **No external data sources**: All reference data is hardcoded in the script.

@@ -50,8 +50,8 @@ For each patient, sort their encounters by `admit_date`. A readmission is an enc
 
 ```python
 # Pseudocode
-df = df.sort_values(['patient_id', 'admit_date'])
-df['prev_discharge'] = df.groupby('patient_id')['discharge_date'].shift(1)
+df = df.sort_values(['research_id', 'admit_date'])
+df['prev_discharge'] = df.groupby('research_id')['discharge_date'].shift(1)
 df['days_since_discharge'] = (df['admit_date'] - df['prev_discharge']).dt.days
 df['is_readmission_derived'] = (df['days_since_discharge'] <= 30) & (df['days_since_discharge'] >= 1)
 ```
@@ -121,7 +121,7 @@ See `CONTEXT.md` for definitions of all domain terms.
 | `length_of_stay_days` | int | Recomputed during cleaning |
 | `primary_dx_code` | string | ICD-10 code |
 | `readmitted_30day` | int (0/1) | 1 = this encounter was an index visit; a readmission row exists for this patient |
-| `days_to_readmission` | float | Days from discharge to readmission admit; only populated when `readmitted_30day = 1` |
+| `days_to_readmission` | int | Days from discharge to readmission admit; only populated when `readmitted_30day = 1` |
 | `discharge_disposition` | string | Where patient went after discharge |
 | `has_pcp` | bool | Whether patient has a primary care provider |
 | `lives_alone` | bool | Social determinant |
@@ -138,10 +138,10 @@ These columns are stored as single strings. Use `STRING_SPLIT()` (SQL Server 201
 
 ```sql
 -- Example: find all patients who received a specific medication
-SELECT patient_id, value AS medication
-FROM healthcare_cleaned_full
-CROSS APPLY STRING_SPLIT(medications, '|')
-WHERE medications IS NOT NULL
+SELECT e.research_id, value AS medication
+FROM dbo.encounters e
+CROSS APPLY STRING_SPLIT(e.medications, '|')
+WHERE e.medications IS NOT NULL
   AND value = 'Metformin';
 ```
 

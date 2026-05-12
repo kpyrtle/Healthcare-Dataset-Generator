@@ -6,6 +6,7 @@ Generates a large synthetic clinical dataset with realistic, intentionally flawe
 
 ```bash
 pip install -r requirements.txt
+make env        # creates .env from .env.example — edit it with your SQL Server details
 ```
 
 ## Usage
@@ -42,14 +43,7 @@ python generate_dataset.py --n-patients 5000 --seed 99 --output my_data.csv --re
 
 ## Cleaning
 
-`clean_healthcare_data.py` reads `outputs/healthcare_dataset_raw.csv`, applies the full cleaning pipeline, and loads the result into SQL Server.
-
-**Before running**, update the connection constants near the top of the file:
-
-```python
-SERVER    = "YOUR_SERVER_NAME"    # e.g. localhost\\SQLEXPRESS
-DATABASE  = "YOUR_DATABASE_NAME"
-```
+`clean_healthcare_data.py` reads `outputs/healthcare_dataset_raw.csv`, applies the full cleaning pipeline, and writes a cleaned CSV. It can also normalize and bulk-load directly into SQL Server.
 
 ```bash
 # Clean and save the full dataset to CSV
@@ -57,13 +51,43 @@ python clean_healthcare_data.py
 
 # Save a 1,000-row sample for quick inspection
 python clean_healthcare_data.py --preview
+
+# Clean + normalize + bulk-load into SQL Server
+python clean_healthcare_data.py --load-sql
 ```
 
 **Outputs** (written to `outputs/`):
 - Default: `healthcare_cleaned_full.csv` — full cleaned dataset
 - `--preview`: `healthcare_cleaned_preview.csv` — 1,000-row sample
 
-To load into SQL Server instead, update the connection constants near the top of the file (`SERVER`, `DATABASE`) and uncomment the `load_to_sql_server(df)` call in `main()`.
+### SQL Server setup
+
+SQL Server credentials are loaded from `.env` — never hardcoded. Run once before using `--load-sql`:
+
+```bash
+make env   # copies .env.example → .env
+```
+
+Then open `.env` and fill in your values:
+
+```
+DB_SERVER=localhost\SQLEXPRESS
+DB_DATABASE=your_database_name
+DB_DRIVER=ODBC Driver 17 for SQL Server
+```
+
+`--load-sql` normalizes the cleaned data into six tables:
+
+| Table | Contents |
+|---|---|
+| `dbo.patients` | One row per patient — demographics |
+| `dbo.encounters` | One row per visit — dates, LOS, age, department, charges |
+| `dbo.vitals` | BP, HR, O2, temperature, BMI per encounter |
+| `dbo.lab_results` | All 9 lab columns per encounter |
+| `dbo.encounter_outcomes` | Readmission and mortality flags per encounter |
+| `dbo.ed_utilization` | ED visit count per encounter |
+
+All tables join on `encounter_id`; `patients` links to `encounters` via `research_id`.
 
 ### What the cleaner fixes
 
