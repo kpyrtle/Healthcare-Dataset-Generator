@@ -45,9 +45,9 @@ log = logging.getLogger(__name__)
 # CONFIG  –  credentials are loaded from .env (run 'make env' to create it)
 # ---------------------------------------------------------------------------
 INPUT_FILE = os.path.join("outputs", "healthcare_dataset_raw.csv")
-SERVER     = os.getenv("DB_SERVER", "")
-DATABASE   = os.getenv("DB_DATABASE", "")
-DRIVER     = os.getenv("DB_DRIVER", "ODBC Driver 17 for SQL Server")
+SERVER = os.getenv("DB_SERVER", "")
+DATABASE = os.getenv("DB_DATABASE", "")
+DRIVER = os.getenv("DB_DRIVER", "ODBC Driver 17 for SQL Server")
 # ---------------------------------------------------------------------------
 
 
@@ -68,7 +68,9 @@ def replace_empty_strings(df: pd.DataFrame) -> pd.DataFrame:
     before = {col: (df[col] == "").sum() for col in str_cols}
     df[str_cols] = df[str_cols].replace("", np.nan)
     total = sum(before.values())
-    log.info("Converted %d empty strings to NaN across %d columns", total, len(str_cols))
+    log.info(
+        "Converted %d empty strings to NaN across %d columns", total, len(str_cols)
+    )
     return df
 
 
@@ -92,62 +94,72 @@ def remove_duplicates(df: pd.DataFrame) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 DEPARTMENT_MAP = {
     # Emergency variants — includes both generator-cased and all-lower forms
-    "Emergancy": "Emergency", "emergancy": "Emergency",
-    "Emrgency":  "Emergency", "emrgency":  "Emergency",
-    "emergency": "Emergency", "EMERGENCY": "Emergency",
-    "ER":        "Emergency",
+    "Emergancy": "Emergency",
+    "emergancy": "Emergency",
+    "Emrgency": "Emergency",
+    "emrgency": "Emergency",
+    "emergency": "Emergency",
+    "EMERGENCY": "Emergency",
+    "ER": "Emergency",
     # Cardiology variants
-    "Cardio":    "Cardiology", "cardio":    "Cardiology",
-    "Cardiolgy": "Cardiology", "cardiolgy": "Cardiology",
-    "CARDIOLOGY":"Cardiology", "cardiology":"Cardiology",
+    "Cardio": "Cardiology",
+    "cardio": "Cardiology",
+    "Cardiolgy": "Cardiology",
+    "cardiolgy": "Cardiology",
+    "CARDIOLOGY": "Cardiology",
+    "cardiology": "Cardiology",
 }
 
 GENDER_MAP = {
-    "male":    "Male",   "MALE":   "Male",   "M": "Male",
-    "male ":   "Male",   " Male":  "Male",
-    "female":  "Female", "FEMALE": "Female", "F": "Female",
-    "female ": "Female", " Female":"Female",
+    "male": "Male",
+    "MALE": "Male",
+    "M": "Male",
+    "male ": "Male",
+    " Male": "Male",
+    "female": "Female",
+    "FEMALE": "Female",
+    "F": "Female",
+    "female ": "Female",
+    " Female": "Female",
     "unknown": "Unknown",
 }
 
 INSURANCE_MAP = {
     # All variants from TYPO_VARIANTS — proper-case and all-caps forms
-    "Medcare":  "Medicare", "medcare":  "Medicare",
-    "Medicre":  "Medicare", "medicre":  "Medicare",
-    "Medicar":  "Medicare", "medicar":  "Medicare",
-    "medicare": "Medicare", "MEDICARE": "Medicare",
+    "Medcare": "Medicare",
+    "medcare": "Medicare",
+    "Medicre": "Medicare",
+    "medicre": "Medicare",
+    "Medicar": "Medicare",
+    "medicar": "Medicare",
+    "medicare": "Medicare",
+    "MEDICARE": "Medicare",
 }
 
 
 def standardise_categoricals(df: pd.DataFrame) -> pd.DataFrame:
     # Department
-    df["department"] = (
-        df["department"]
-        .str.strip()
-        .replace(DEPARTMENT_MAP)
+    df["department"] = df["department"].str.strip().replace(DEPARTMENT_MAP)
+    log.info(
+        "Department unique values after clean: %s",
+        sorted(df["department"].dropna().unique()),
     )
-    log.info("Department unique values after clean: %s",
-             sorted(df["department"].dropna().unique()))
 
     # Gender
-    df["gender"] = (
-        df["gender"]
-        .str.strip()
-        .replace(GENDER_MAP)
-    )
+    df["gender"] = df["gender"].str.strip().replace(GENDER_MAP)
     # Anything left that isn't a known value -> Unknown
     known_genders = {"Male", "Female", "Non-binary", "Unknown"}
-    df.loc[~df["gender"].isin(known_genders) & df["gender"].notna(), "gender"] = "Unknown"
+    df.loc[~df["gender"].isin(known_genders) & df["gender"].notna(), "gender"] = (
+        "Unknown"
+    )
     df["gender"] = df["gender"].fillna("Unknown")
 
     # Insurance type
-    df["insurance_type"] = (
-        df["insurance_type"]
-        .str.strip()
-        .replace(INSURANCE_MAP)
+    df["insurance_type"] = df["insurance_type"].str.strip().replace(INSURANCE_MAP)
+    log.info(
+        "Insurance unique values after clean: %s",
+        sorted(df["insurance_type"].dropna().unique()),
     )
-    log.info("Insurance unique values after clean: %s",
-             sorted(df["insurance_type"].dropna().unique()))
 
     return df
 
@@ -156,14 +168,12 @@ def standardise_categoricals(df: pd.DataFrame) -> pd.DataFrame:
 # 3. DATES  &  AGE / DOB RECONCILIATION
 # ---------------------------------------------------------------------------
 def clean_dates_and_age(df: pd.DataFrame) -> pd.DataFrame:
-    df["admit_date"]     = pd.to_datetime(df["admit_date"],     errors="coerce")
+    df["admit_date"] = pd.to_datetime(df["admit_date"], errors="coerce")
     df["discharge_date"] = pd.to_datetime(df["discharge_date"], errors="coerce")
-    df["date_of_birth"]  = pd.to_datetime(df["date_of_birth"],  errors="coerce")
+    df["date_of_birth"] = pd.to_datetime(df["date_of_birth"], errors="coerce")
 
     # Recompute length of stay from dates (more reliable than the raw column)
-    df["length_of_stay_days"] = (
-        (df["discharge_date"] - df["admit_date"]).dt.days
-    )
+    df["length_of_stay_days"] = (df["discharge_date"] - df["admit_date"]).dt.days
     # Negative LOS is impossible – null it out
     neg_los = df["length_of_stay_days"] < 0
     log.info("Nulled %d rows with negative length_of_stay_days", neg_los.sum())
@@ -184,8 +194,8 @@ def clean_dates_and_age(df: pd.DataFrame) -> pd.DataFrame:
     log.info("Replaced date_of_birth with birth_year")
 
     df["length_of_stay_days"] = df["length_of_stay_days"].astype("Int16")
-    df["age"]                 = df["age"].astype("Int16")
-    df["birth_year"]          = df["birth_year"].astype("Int16")
+    df["age"] = df["age"].astype("Int16")
+    df["birth_year"] = df["birth_year"].astype("Int16")
 
     return df
 
@@ -194,22 +204,23 @@ def clean_dates_and_age(df: pd.DataFrame) -> pd.DataFrame:
 # 4. VITALS – clamp to physiologically plausible ranges
 # ---------------------------------------------------------------------------
 VITALS_BOUNDS = {
-    "bp_systolic":        (50,  300),
-    "bp_diastolic":       (20,  200),
-    "heart_rate_bpm":     (20,  300),
-    "o2_saturation_pct":  (50,  100),
-    "temperature_f":      (90,  108),
-    "bmi":                (10,   80),
-    "glucose_mg_dl":      (20,  800),
-    "creatinine_mg_dl":   (0.1,  20),
-    "potassium_meq_l":    (1.5,  9.0),
-    "sodium_meq_l":       (100, 180),
-    "wbc_k_ul":           (0.5,  100),
-    "hemoglobin_g_dl":    (3.0,  22),
-    "hba1c_pct":          (3.0,  20),
-    "lactate_mmol_l":     (0.2,  30),
-    "troponin_ng_ml":     (0.0,  50),
+    "bp_systolic": (50, 300),
+    "bp_diastolic": (20, 200),
+    "heart_rate_bpm": (20, 300),
+    "o2_saturation_pct": (50, 100),
+    "temperature_f": (90, 108),
+    "bmi": (10, 80),
+    "glucose_mg_dl": (20, 800),
+    "creatinine_mg_dl": (0.1, 20),
+    "potassium_meq_l": (1.5, 9.0),
+    "sodium_meq_l": (100, 180),
+    "wbc_k_ul": (0.5, 100),
+    "hemoglobin_g_dl": (3.0, 22),
+    "hba1c_pct": (3.0, 20),
+    "lactate_mmol_l": (0.2, 30),
+    "troponin_ng_ml": (0.0, 50),
 }
+
 
 def clean_vitals(df: pd.DataFrame) -> pd.DataFrame:
     for col, (lo, hi) in VITALS_BOUNDS.items():
@@ -260,8 +271,7 @@ def clean_charges(df: pd.DataFrame) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 def clean_satisfaction(df: pd.DataFrame) -> pd.DataFrame:
     invalid = df["patient_satisfaction_score"].notna() & (
-        (df["patient_satisfaction_score"] < 1) |
-        (df["patient_satisfaction_score"] > 10)
+        (df["patient_satisfaction_score"] < 1) | (df["patient_satisfaction_score"] > 10)
     )
     log.info("Nulled %d invalid patient_satisfaction_score values", invalid.sum())
     df.loc[invalid, "patient_satisfaction_score"] = np.nan
@@ -298,14 +308,24 @@ def clean_logical_flags(df: pd.DataFrame) -> pd.DataFrame:
 # 9. DISCHARGE DISPOSITION
 # ---------------------------------------------------------------------------
 VALID_DISPOSITIONS = {
-    "Home", "Skilled Nursing Facility", "Home Health", "AMA",
-    "Expired", "Rehab", "Transfer", "Hospice", "Long-term Acute Care",
+    "Home",
+    "Skilled Nursing Facility",
+    "Home Health",
+    "AMA",
+    "Expired",
+    "Rehab",
+    "Transfer",
+    "Hospice",
+    "Long-term Acute Care",
 }
+
 
 def clean_discharge_disposition(df: pd.DataFrame) -> pd.DataFrame:
     if "discharge_disposition" not in df.columns:
         return df
-    invalid = df["discharge_disposition"].notna() & ~df["discharge_disposition"].isin(VALID_DISPOSITIONS)
+    invalid = df["discharge_disposition"].notna() & ~df["discharge_disposition"].isin(
+        VALID_DISPOSITIONS
+    )
     log.info("Nulled %d invalid discharge_disposition values", invalid.sum())
     df.loc[invalid, "discharge_disposition"] = np.nan
     return df
@@ -346,24 +366,28 @@ def clean_mortality_flags(df: pd.DataFrame) -> pd.DataFrame:
 def clean_days_to_readmission(df: pd.DataFrame) -> pd.DataFrame:
     # Values > 30 are outside the 30-day readmission window
     out_of_window = (
-        df["readmitted_30day"] == 1
-    ) & df["days_to_readmission"].notna() & (df["days_to_readmission"] > 30)
-    log.info(
-        "Nulled %d days_to_readmission values > 30 days", out_of_window.sum()
+        (df["readmitted_30day"] == 1)
+        & df["days_to_readmission"].notna()
+        & (df["days_to_readmission"] > 30)
     )
+    log.info("Nulled %d days_to_readmission values > 30 days", out_of_window.sum())
     df.loc[out_of_window, "days_to_readmission"] = np.nan
 
     # Values < 1 are also impossible (same-day readmission is not counted)
     below_min = (
-        df["readmitted_30day"] == 1
-    ) & df["days_to_readmission"].notna() & (df["days_to_readmission"] < 1)
+        (df["readmitted_30day"] == 1)
+        & df["days_to_readmission"].notna()
+        & (df["days_to_readmission"] < 1)
+    )
     log.info("Nulled %d days_to_readmission values < 1", below_min.sum())
     df.loc[below_min, "days_to_readmission"] = np.nan
 
     # Recompute flag here so it captures all nulls from every cleaning step
     flag = (df["readmitted_30day"] == 1) & df["days_to_readmission"].isna()
     df["readmission_days_missing"] = flag.astype(int)
-    log.info("Flagged %d rows: readmitted=1 but days_to_readmission is null", flag.sum())
+    log.info(
+        "Flagged %d rows: readmitted=1 but days_to_readmission is null", flag.sum()
+    )
 
     df["days_to_readmission"] = df["days_to_readmission"].astype("Int8")
 
@@ -398,14 +422,19 @@ def clean_social_determinants(df: pd.DataFrame) -> pd.DataFrame:
 def final_tidy(df: pd.DataFrame) -> pd.DataFrame:
     # Safe Harbor: replace patient_id with a non-reversible research ID
     if "patient_id" in df.columns:
-        df["research_id"] = df["patient_id"].astype(str).apply(
-            lambda x: hashlib.sha256(x.encode()).hexdigest()[:12]
+        df["research_id"] = (
+            df["patient_id"]
+            .astype(str)
+            .apply(lambda x: hashlib.sha256(x.encode()).hexdigest()[:12])
         )
         log.info("Replaced patient_id with hashed research_id")
 
     pii_cols = ["first_name", "last_name", "patient_id"]
     df = df.drop(columns=pii_cols, errors="ignore")
-    log.info("Dropped PII columns: %s", [c for c in pii_cols if c in df.columns or c == "patient_id"])
+    log.info(
+        "Dropped PII columns: %s",
+        [c for c in pii_cols if c in df.columns or c == "patient_id"],
+    )
 
     # Reset index
     df = df.reset_index(drop=True)
@@ -425,7 +454,7 @@ def normalize_and_load(df: pd.DataFrame) -> None:
     conn_str = (
         f"mssql+pyodbc://{SERVER}/{DATABASE}"
         f"?driver={DRIVER.replace(' ', '+')}"
-        "&trusted_connection=yes"      # Windows auth – remove if using SQL auth
+        "&trusted_connection=yes"  # Windows auth – remove if using SQL auth
         # For SQL auth uncomment and fill:
         # f"&uid=YOUR_USERNAME&pwd=YOUR_PASSWORD"
     )
@@ -437,41 +466,71 @@ def normalize_and_load(df: pd.DataFrame) -> None:
     df.insert(0, "encounter_id", range(1, len(df) + 1))
 
     tables = {
-        "patients": df[[
-            "research_id", "gender", "birth_year", "zip_code",
-        ]].drop_duplicates("research_id"),
-
-        "encounters": df[[
-            "encounter_id", "research_id",
-            "admit_date", "discharge_date", "length_of_stay_days",
-            "age", "department", "insurance_type",
-            "total_charges_usd", "charge_sign_corrected",
-            "discharge_disposition", "patient_satisfaction_score",
-        ]],
-
-        "vitals": df[[
-            "encounter_id",
-            "bp_systolic", "bp_diastolic", "heart_rate_bpm",
-            "o2_saturation_pct", "temperature_f", "bmi",
-        ]],
-
-        "lab_results": df[[
-            "encounter_id",
-            "glucose_mg_dl", "creatinine_mg_dl",
-            "potassium_meq_l", "sodium_meq_l",
-            "wbc_k_ul", "hemoglobin_g_dl",
-            "hba1c_pct", "lactate_mmol_l", "troponin_ng_ml",
-        ]],
-
-        "encounter_outcomes": df[[
-            "encounter_id",
-            "readmitted_30day", "days_to_readmission",
-            "readmission_days_missing", "inpatient_mortality",
-        ]],
-
-        "ed_utilization": df[[
-            "encounter_id", "research_id", "ed_visits_past_6mo",
-        ]],
+        "patients": df[
+            [
+                "research_id",
+                "gender",
+                "birth_year",
+                "zip_code",
+            ]
+        ].drop_duplicates("research_id"),
+        "encounters": df[
+            [
+                "encounter_id",
+                "research_id",
+                "admit_date",
+                "discharge_date",
+                "length_of_stay_days",
+                "age",
+                "department",
+                "insurance_type",
+                "total_charges_usd",
+                "charge_sign_corrected",
+                "discharge_disposition",
+                "patient_satisfaction_score",
+            ]
+        ],
+        "vitals": df[
+            [
+                "encounter_id",
+                "bp_systolic",
+                "bp_diastolic",
+                "heart_rate_bpm",
+                "o2_saturation_pct",
+                "temperature_f",
+                "bmi",
+            ]
+        ],
+        "lab_results": df[
+            [
+                "encounter_id",
+                "glucose_mg_dl",
+                "creatinine_mg_dl",
+                "potassium_meq_l",
+                "sodium_meq_l",
+                "wbc_k_ul",
+                "hemoglobin_g_dl",
+                "hba1c_pct",
+                "lactate_mmol_l",
+                "troponin_ng_ml",
+            ]
+        ],
+        "encounter_outcomes": df[
+            [
+                "encounter_id",
+                "readmitted_30day",
+                "days_to_readmission",
+                "readmission_days_missing",
+                "inpatient_mortality",
+            ]
+        ],
+        "ed_utilization": df[
+            [
+                "encounter_id",
+                "research_id",
+                "ed_visits_past_6mo",
+            ]
+        ],
     }
 
     for table_name, table_df in tables.items():

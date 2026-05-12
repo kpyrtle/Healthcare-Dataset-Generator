@@ -206,7 +206,11 @@ def generate_visit(
     else:
         admit_hour = random.choice(range(6, 16))
 
-    primary_dx = override_dx if override_dx is not None else select_diagnosis_for_date(admit_date)
+    primary_dx = (
+        override_dx
+        if override_dx is not None
+        else select_diagnosis_for_date(admit_date)
+    )
     secondary_dx = generate_secondary_diagnoses(primary_dx)
 
     dept = get_department_for_diagnosis(primary_dx)
