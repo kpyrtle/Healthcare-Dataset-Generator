@@ -26,6 +26,9 @@ python clean_healthcare_data.py --preview  # or: make preview
 
 # Clean + normalize + bulk-load into SQL Server
 python clean_healthcare_data.py --load-sql # or: make load-sql
+
+# Format all Python files before committing
+make format                               # runs Black on all .py files
 ```
 
 All outputs land in `outputs/`:
@@ -34,7 +37,7 @@ All outputs land in `outputs/`:
 - `healthcare_cleaned_full.csv` — full cleaned dataset
 - `healthcare_cleaned_preview.csv` — 1,000-row sample (--preview only)
 
-**Dependencies**: `pandas`, `numpy`, `sqlalchemy`, `tqdm`, `pyarrow`, `python-dotenv` (plus Python stdlib). Install: `pip install -r requirements.txt`.
+**Dependencies**: `pandas`, `numpy`, `sqlalchemy`, `tqdm`, `pyarrow`, `python-dotenv`, `black` (plus Python stdlib). Install: `pip install -r requirements.txt`.
 
 ## Architecture
 

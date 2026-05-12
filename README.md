@@ -9,6 +9,14 @@ pip install -r requirements.txt
 make env        # creates .env from .env.example — edit it with your SQL Server details
 ```
 
+## Code Style
+
+This project uses [Black](https://black.readthedocs.io/) for Python formatting. Run before committing:
+
+```bash
+make format
+```
+
 ## Usage
 
 ```bash
