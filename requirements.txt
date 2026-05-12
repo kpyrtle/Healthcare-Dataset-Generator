@@ -4,3 +4,4 @@ sqlalchemy
 tqdm
 pyarrow
 python-dotenv
+black

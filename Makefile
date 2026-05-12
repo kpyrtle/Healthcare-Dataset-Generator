@@ -2,7 +2,7 @@ PYTHON   := python
 PIP      := pip
 OUTPUTS  := outputs
 
-.PHONY: all setup env generate clean clean-data preview load-sql clean-outputs help
+.PHONY: all setup env generate clean clean-data preview load-sql clean-outputs format help
 
 ## Default: generate then clean
 all: generate clean-data
@@ -31,6 +31,10 @@ preview:
 load-sql:
 	$(PYTHON) clean_healthcare_data.py --load-sql
 
+## Format all Python files with Black
+format:
+	$(PYTHON) -m black .
+
 ## Remove all generated output files and recreate the empty outputs/ folder
 clean-outputs:
 	$(PYTHON) -c "import shutil, os; shutil.rmtree('$(OUTPUTS)', ignore_errors=True); os.makedirs('$(OUTPUTS)')"
@@ -47,5 +51,6 @@ help:
 	@echo "  make preview       Run clean_healthcare_data.py --preview (1,000 rows)"
 	@echo "  make load-sql      Clean + normalize + load into SQL Server (includes cleaning)"
 	@echo "  make all           generate + clean-data"
+	@echo "  make format        Run Black formatter on all Python files"
 	@echo "  make clean-outputs Delete everything in outputs/ and recreate the folder"
 	@echo "  make help          Show this message"
