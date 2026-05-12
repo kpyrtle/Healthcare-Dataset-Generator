@@ -2,7 +2,7 @@ PYTHON   := python
 PIP      := pip
 OUTPUTS  := outputs
 
-.PHONY: all setup env generate clean-data preview load-sql clean-outputs help
+.PHONY: all setup env generate clean clean-data preview load-sql clean-outputs help
 
 ## Default: generate then clean
 all: generate clean-data
@@ -20,8 +20,8 @@ generate:
 	$(PYTHON) generate_dataset.py
 
 ## Clean the raw dataset  ->  outputs/healthcare_cleaned_full.csv
-clean-data:
-	$(PYTHON) clean_healthcare_data.py
+clean-data: ; $(PYTHON) clean_healthcare_data.py
+clean: clean-data
 
 ## Quick 1,000-row preview  ->  outputs/healthcare_cleaned_preview.csv
 preview:
@@ -42,9 +42,10 @@ help:
 	@echo "  make setup         Install dependencies (pip install -r requirements.txt)"
 	@echo "  make env           Create .env from .env.example (skips if exists)"
 	@echo "  make generate      Run generate_dataset.py"
+	@echo "  make clean         Run clean_healthcare_data.py (alias for clean-data)"
 	@echo "  make clean-data    Run clean_healthcare_data.py"
 	@echo "  make preview       Run clean_healthcare_data.py --preview (1,000 rows)"
-	@echo "  make load-sql      Clean + normalize + load into SQL Server"
+	@echo "  make load-sql      Clean + normalize + load into SQL Server (includes cleaning)"
 	@echo "  make all           generate + clean-data"
 	@echo "  make clean-outputs Delete everything in outputs/ and recreate the folder"
 	@echo "  make help          Show this message"
