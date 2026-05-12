@@ -30,7 +30,10 @@ import os
 import pandas as pd
 import numpy as np
 from sqlalchemy import create_engine
+from dotenv import load_dotenv
 import logging
+
+load_dotenv()
 
 logging.basicConfig(
     level=logging.INFO,
@@ -39,13 +42,12 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# CONFIG  –  update these before running
+# CONFIG  –  credentials are loaded from .env (run 'make env' to create it)
 # ---------------------------------------------------------------------------
-INPUT_FILE   = os.path.join("outputs", "healthcare_dataset_raw.csv")
-SERVER       = "YOUR_SERVER_NAME"        # e.g. localhost\\SQLEXPRESS
-DATABASE     = "YOUR_DATABASE_NAME"
-TABLE_NAME   = "healthcare_visits_clean"
-DRIVER       = "ODBC Driver 17 for SQL Server"
+INPUT_FILE = os.path.join("outputs", "healthcare_dataset_raw.csv")
+SERVER     = os.getenv("DB_SERVER", "")
+DATABASE   = os.getenv("DB_DATABASE", "")
+DRIVER     = os.getenv("DB_DRIVER", "ODBC Driver 17 for SQL Server")
 # ---------------------------------------------------------------------------
 
 
@@ -180,6 +182,10 @@ def clean_dates_and_age(df: pd.DataFrame) -> pd.DataFrame:
     df["birth_year"] = df["date_of_birth"].dt.year
     df = df.drop(columns=["date_of_birth"], errors="ignore")
     log.info("Replaced date_of_birth with birth_year")
+
+    df["length_of_stay_days"] = df["length_of_stay_days"].astype("Int16")
+    df["age"]                 = df["age"].astype("Int16")
+    df["birth_year"]          = df["birth_year"].astype("Int16")
 
     return df
 
@@ -359,6 +365,8 @@ def clean_days_to_readmission(df: pd.DataFrame) -> pd.DataFrame:
     df["readmission_days_missing"] = flag.astype(int)
     log.info("Flagged %d rows: readmitted=1 but days_to_readmission is null", flag.sum())
 
+    df["days_to_readmission"] = df["days_to_readmission"].astype("Int8")
+
     return df
 
 
@@ -406,9 +414,14 @@ def final_tidy(df: pd.DataFrame) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
-# 10. LOAD TO SQL SERVER
+# 10. NORMALIZE AND LOAD TO SQL SERVER
 # ---------------------------------------------------------------------------
-def load_to_sql_server(df: pd.DataFrame) -> None:
+def normalize_and_load(df: pd.DataFrame) -> None:
+    if not SERVER or not DATABASE:
+        raise EnvironmentError(
+            "DB_SERVER and DB_DATABASE must be set in your .env file. "
+            "Run 'make env' to create one from .env.example."
+        )
     conn_str = (
         f"mssql+pyodbc://{SERVER}/{DATABASE}"
         f"?driver={DRIVER.replace(' ', '+')}"
@@ -419,16 +432,61 @@ def load_to_sql_server(df: pd.DataFrame) -> None:
     log.info("Connecting to SQL Server: %s / %s", SERVER, DATABASE)
     engine = create_engine(conn_str, fast_executemany=True)
 
-    log.info("Writing %d rows to dbo.%s ...", len(df), TABLE_NAME)
-    df.to_sql(
-        TABLE_NAME,
-        engine,
-        schema="dbo",
-        if_exists="replace",   # change to "append" on subsequent loads
-        index=False,
-        chunksize=5000,
-    )
-    log.info("Load complete.")
+    # Surrogate encounter key – row order is stable after dedup + reset_index
+    df = df.copy()
+    df.insert(0, "encounter_id", range(1, len(df) + 1))
+
+    tables = {
+        "patients": df[[
+            "research_id", "gender", "birth_year", "zip_code",
+        ]].drop_duplicates("research_id"),
+
+        "encounters": df[[
+            "encounter_id", "research_id",
+            "admit_date", "discharge_date", "length_of_stay_days",
+            "age", "department", "insurance_type",
+            "total_charges_usd", "charge_sign_corrected",
+            "discharge_disposition", "patient_satisfaction_score",
+        ]],
+
+        "vitals": df[[
+            "encounter_id",
+            "bp_systolic", "bp_diastolic", "heart_rate_bpm",
+            "o2_saturation_pct", "temperature_f", "bmi",
+        ]],
+
+        "lab_results": df[[
+            "encounter_id",
+            "glucose_mg_dl", "creatinine_mg_dl",
+            "potassium_meq_l", "sodium_meq_l",
+            "wbc_k_ul", "hemoglobin_g_dl",
+            "hba1c_pct", "lactate_mmol_l", "troponin_ng_ml",
+        ]],
+
+        "encounter_outcomes": df[[
+            "encounter_id",
+            "readmitted_30day", "days_to_readmission",
+            "readmission_days_missing", "inpatient_mortality",
+        ]],
+
+        "ed_utilization": df[[
+            "encounter_id", "research_id", "ed_visits_past_6mo",
+        ]],
+    }
+
+    for table_name, table_df in tables.items():
+        log.info("Loading %d rows into dbo.%s ...", len(table_df), table_name)
+        table_df.to_sql(
+            table_name,
+            engine,
+            schema="dbo",
+            if_exists="replace",
+            index=False,
+            chunksize=5000,
+        )
+        log.info("  dbo.%s done.", table_name)
+
+    log.info("All tables loaded successfully.")
 
 
 # ---------------------------------------------------------------------------
@@ -436,10 +494,20 @@ def load_to_sql_server(df: pd.DataFrame) -> None:
 # ---------------------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser(description="Clean the raw healthcare dataset")
-    parser.add_argument(
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
         "--preview",
         action="store_true",
-        help="Save a 1,000-row CSV sample instead of loading the full dataset to SQL Server",
+        help="Save a 1,000-row CSV sample for inspection",
+    )
+    group.add_argument(
+        "--load-sql",
+        action="store_true",
+        dest="load_sql",
+        help=(
+            "Write full CSV then normalize and bulk-load into SQL Server "
+            "(requires SERVER and DATABASE to be set at the top of this file)"
+        ),
     )
     args = parser.parse_args()
 
@@ -464,10 +532,15 @@ def main():
         preview_path = os.path.join("outputs", "healthcare_cleaned_preview.csv")
         df.head(1000).to_csv(preview_path, index=False)
         log.info("Saved 1,000-row preview to %s", preview_path)
+    elif args.load_sql:
+        full_path = os.path.join("outputs", "healthcare_cleaned_full.csv")
+        df.to_csv(full_path, index=False)
+        log.info("Saved full cleaned CSV to %s", full_path)
+        normalize_and_load(df)
     else:
         full_path = os.path.join("outputs", "healthcare_cleaned_full.csv")
         df.to_csv(full_path, index=False)
-        # load_to_sql_server(df)
+        log.info("Saved full cleaned CSV to %s", full_path)
 
 
 if __name__ == "__main__":
