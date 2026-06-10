@@ -1,4 +1,5 @@
 import random
+import string
 from collections import defaultdict
 from typing import Any, Optional
 
@@ -84,3 +85,32 @@ def add_typo(
             tracker.record("typo", f"'{val}' -> '{typo}'", row_idx)
         return typo
     return val
+
+
+def corrupt_icd_code(
+    code: str,
+    rate: float = 0.06,
+    tracker: DataQualityTracker = None,
+    row_idx: int = None,
+) -> str:
+    if random.random() >= rate:
+        return code
+
+    candidates = ["bad_char", "extra_digit"]
+    if len(code) > 3:
+        candidates.append("truncate")
+
+    corruption_type = random.choice(candidates)
+    if corruption_type == "truncate":
+        corrupted = code[:3]
+    elif corruption_type == "bad_char":
+        pos = random.randint(1, len(code) - 1)
+        corrupted = code[:pos] + "X" + code[pos + 1 :]
+    else:
+        corrupted = code + random.choice(string.digits)
+
+    if tracker:
+        tracker.record(
+            "invalid_icd_code", f"{corruption_type}: '{code}' -> '{corrupted}'", row_idx
+        )
+    return corrupted

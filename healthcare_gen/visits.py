@@ -14,7 +14,7 @@ from .clinical import (
     select_diagnosis_for_date,
 )
 from .config import CONFIG
-from .corruption import DataQualityTracker, add_typo, corrupt
+from .corruption import DataQualityTracker, add_typo, corrupt, corrupt_icd_code
 from .demographics import generate_social_determinants
 from .reference_data import (
     ADMIT_TYPE_WEIGHTS,
@@ -161,13 +161,13 @@ def calculate_mortality_risk(age: int, dx_code: str, dept: str) -> float:
 
 def _pick_readmission_dx(primary_dx: str, secondary_dx_str: str) -> str:
     r = random.random()
-    if r < 0.60:
+    if r < 0.60 and primary_dx in DIAGNOSES:
         return primary_dx
     elif r < 0.90:
         secondary = [c for c in secondary_dx_str.split("|") if c and c in DIAGNOSES]
         if secondary:
             return random.choice(secondary)
-        return primary_dx
+        return random.choice(list(DIAGNOSES.keys()))
     else:
         return random.choice(list(DIAGNOSES.keys()))
 
@@ -373,7 +373,12 @@ def generate_visit(
         ),
         "department": dept,
         "admit_type": admit_type,
-        "primary_dx_code": primary_dx,
+        "primary_dx_code": corrupt_icd_code(
+            primary_dx,
+            CONFIG["corruption"]["invalid_icd_code_rate"],
+            tracker=tracker,
+            row_idx=row_idx,
+        ),
         "primary_dx_description": corrupt(
             DIAGNOSES[primary_dx]["desc"],
             0.03,
@@ -382,7 +387,19 @@ def generate_visit(
             issue_type="missing_dx_desc",
             row_idx=row_idx,
         ),
-        "secondary_dx_codes": "|".join(secondary_dx) if secondary_dx else "",
+        "secondary_dx_codes": (
+            "|".join(
+                corrupt_icd_code(
+                    code,
+                    CONFIG["corruption"]["invalid_icd_code_rate"],
+                    tracker=tracker,
+                    row_idx=row_idx,
+                )
+                for code in secondary_dx
+            )
+            if secondary_dx
+            else ""
+        ),
         "procedure_codes": "|".join([p[0] for p in procedures]) if procedures else "",
         "procedure_descriptions": (
             "|".join([p[1] for p in procedures]) if procedures else ""

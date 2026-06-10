@@ -84,6 +84,7 @@ Corruption is injected intentionally throughout generation, controlled by `CONFI
 - **Swapped fields** — 0.5% rate (admit/discharge dates, first/last names)
 - **Duplicate rows** — 0.9% rate
 - **Charge inflation** — 2% rate
+- **Invalid ICD-10 codes** — 6% rate (truncation, character substitution, or extra digit appended to `primary_dx_code` / `secondary_dx_codes`; clinical fields use the clean code)
 
 All injected issues are tracked by `DataQualityTracker` and written to the quality report.
 

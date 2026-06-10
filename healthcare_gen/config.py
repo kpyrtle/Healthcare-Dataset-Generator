@@ -14,6 +14,7 @@ CONFIG = {
         "impossible_value_rate": 0.01,
         "swapped_field_rate": 0.005,
         "duplicate_patient_rate": 0.009,
+        "invalid_icd_code_rate": 0.06,
     },
     "multi_visit": {
         "enabled": True,
