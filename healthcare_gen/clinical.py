@@ -69,19 +69,23 @@ def generate_vitals(age: int, dx_code: str, dept: str) -> Dict[str, Optional[flo
         bp_sys_base += 25
         bp_dia_base += 15
 
-    if dx_code == "A41.9":
+    if dx_code in ["A41.9", "A41.51"]:
         hr_base += 30
         temp_base += 2.5
         bp_sys_base -= 25
         o2_base -= 4
 
-    if dx_code in ["J44.1", "J18.9"]:
+    if dx_code in ["J44.1", "J18.9", "J18.1", "J44.0"]:
         o2_base -= 5
         hr_base += 10
 
-    if dx_code == "I21.9":
+    if dx_code in ["I21.9", "I21.3"]:
         hr_base += 15
         bp_sys_base += 10
+
+    if dx_code in ["I50.9", "I50.20", "I50.22", "I50.30"]:
+        o2_base -= 3
+        hr_base += 8
 
     vm = 1.5 if dept == "ICU" else 1.0
 
@@ -129,7 +133,7 @@ def generate_lab_results(dx_code: str, age: int) -> Dict[str, Optional[float]]:
     labs["wbc_k_ul"] = round(float(raw[4]), 1)
     labs["hemoglobin_g_dl"] = round(float(raw[5]), 1)
 
-    if dx_code == "E11.9":
+    if dx_code in ["E11.9", "E11.65"]:
         labs["glucose_mg_dl"] = int(np.random.normal(180, 60))
         labs["hba1c_pct"] = round(np.random.normal(8.5, 1.5), 1)
 
@@ -138,15 +142,20 @@ def generate_lab_results(dx_code: str, age: int) -> Dict[str, Optional[float]]:
         labs["potassium_meq_l"] = round(np.random.normal(5.2, 0.6), 1)
         labs["hemoglobin_g_dl"] = round(np.random.normal(10.0, 1.5), 1)
 
-    if dx_code == "A41.9":
+    if dx_code == "N17.9":
+        labs["creatinine_mg_dl"] = round(np.random.normal(3.5, 1.2), 2)
+        labs["potassium_meq_l"] = round(np.random.normal(5.0, 0.7), 1)
+
+    if dx_code in ["A41.9", "A41.51"]:
         labs["wbc_k_ul"] = round(np.random.lognormal(2.5, 0.5), 1)
         labs["lactate_mmol_l"] = round(np.random.normal(4.0, 2.0), 1)
 
-    if dx_code in ["K92.1"]:
+    if dx_code in ["K92.1", "D64.9"]:
         labs["hemoglobin_g_dl"] = round(np.random.normal(8.0, 2.0), 1)
 
-    if dx_code == "I21.9":
-        labs["troponin_ng_ml"] = round(np.random.lognormal(-1, 1.5), 3)
+    if dx_code in ["I21.9", "I21.3"]:
+        mean_log = 0 if dx_code == "I21.3" else -1
+        labs["troponin_ng_ml"] = round(np.random.lognormal(mean_log, 1.5), 3)
 
     if dx_code == "E87.6":
         labs["potassium_meq_l"] = round(np.random.normal(2.8, 0.4), 1)

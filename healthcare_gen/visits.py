@@ -109,7 +109,18 @@ def calculate_readmit_risk(
     severity_adj = {"low": 0, "medium": 0.03, "high": 0.08, "critical": 0.12}
     risk += severity_adj.get(severity, 0)
 
-    if dx_code in ["I50.9", "A41.9", "N18.6", "J44.1"]:
+    if dx_code in [
+        "I50.9",
+        "A41.9",
+        "N18.6",
+        "J44.1",
+        "I50.20",
+        "I50.22",
+        "I50.30",
+        "A41.51",
+        "N17.9",
+        "J44.0",
+    ]:
         risk += 0.08
 
     if insurance == "Uninsured":
